@@ -30,7 +30,7 @@ async function run() {
 
         const db = client.db("recipehub");
 
-        const usersCollection = db.collection("users");
+        const usersCollection = db.collection("user");
         const recipesCollection = db.collection("recipes");
         const favoritesCollection = db.collection("favorites");
         const reportsCollection = db.collection("reports");
@@ -331,6 +331,46 @@ async function run() {
 
                 res.send({
                     isFavorite: !!favorite,
+                });
+            } catch (error) {
+                console.error(error);
+
+                res.status(500).send({
+                    message: "Internal Server Error",
+                });
+            }
+        });
+
+        //free user limit features
+        // Recipe limit API
+        app.get("/recipe-limit", verifyToken, async (req, res) => {
+            try {
+                const userEmail = req.user.email;
+
+                const user = await usersCollection.findOne({
+                    email: userEmail,
+                });
+
+                if (!user) {
+                    return res.status(404).send({
+                        message: "User not found.",
+                    });
+                }
+
+                const recipeCount = await recipesCollection.countDocuments({
+                    authorEmail: userEmail,
+                });
+
+                const maxRecipes = 2;
+
+                res.send({
+                    isPremium: user.isPremium,
+                    recipeCount,
+                    remaining: user.isPremium
+                        ? "Unlimited"
+                        : Math.max(maxRecipes - recipeCount, 0),
+                    canAddRecipe:
+                        user.isPremium || recipeCount < maxRecipes,
                 });
             } catch (error) {
                 console.error(error);
