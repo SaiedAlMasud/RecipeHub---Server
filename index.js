@@ -3,12 +3,13 @@ require("dotenv").config();
 const verifyToken = require("./middleware/verifyToken");
 const express = require("express");
 const cors = require("cors");
+const Stripe = require("stripe");
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const app = express();
 const port = process.env.PORT || 5000;
-
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -380,6 +381,61 @@ async function run() {
                 });
             }
         });
+
+        //stripe payment api
+        app.post(
+            "/create-checkout-session",
+            verifyToken,
+            async (req, res) => {
+                try {
+                    const { email } = req.user;
+
+                    const session = await stripe.checkout.sessions.create({
+                        payment_method_types: ["card"],
+
+                        mode: "payment",
+
+                        customer_email: email,
+
+                        line_items: [
+                            {
+                                price_data: {
+                                    currency: "bdt",
+
+                                    product_data: {
+                                        name: "RecipeHub Premium Membership",
+                                    },
+
+                                    unit_amount: 49900,
+                                },
+
+                                quantity: 1,
+                            },
+                        ],
+
+                        success_url:
+                            `${process.env.CLIENT_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+
+                        cancel_url:
+                            `${process.env.CLIENT_URL}/payment`,
+                    });
+
+                    res.send({
+                        url: session.url,
+                    });
+
+                } catch (error) {
+
+                    console.error(error);
+
+                    res.status(500).send({
+                        message: "Failed to create checkout session.",
+                    });
+                }
+            }
+        );
+
+        
 
         console.log("MongoDB Connected Successfully");
     } finally {
