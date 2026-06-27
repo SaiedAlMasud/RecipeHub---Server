@@ -58,7 +58,7 @@ module.exports = function (
                         line_items: [
                             {
                                 price_data: {
-                                    currency: "bdt",
+                                    currency: "USD",
 
                                     product_data: {
                                         name: recipe.recipeName,
@@ -90,6 +90,67 @@ module.exports = function (
                 res.status(500).send({
                     message:
                         "Failed to create checkout session.",
+                });
+
+            }
+        }
+    );
+
+    router.post(
+        "/payment-success",
+        verifyToken,
+        async (req, res) => {
+            try {
+                const { sessionId, recipeId } = req.body;
+
+                if (!sessionId || !recipeId) {
+                    return res.status(400).send({
+                        message: "Session ID and Recipe ID are required.",
+                    });
+                }
+
+                const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+                if (session.payment_status !== "paid") {
+                    return res.status(400).send({
+                        message: "Payment not completed.",
+                    });
+                }
+
+                const existingPurchase = await paymentsCollection.findOne({
+                    stripeSessionId: session.id,
+                    purchaseType: "recipe",
+                });
+
+                if (existingPurchase) {
+                    return res.send({
+                        message: "Recipe already purchased.",
+                    });
+                }
+
+                await paymentsCollection.insertOne({
+                    purchaseType: "recipe",
+                    recipeId,
+                    recipeName: session.metadata.recipeName,
+                    userEmail: req.user.email,
+                    amount: session.amount_total / 100,
+                    currency: session.currency,
+                    stripeSessionId: session.id,
+                    transactionId: session.payment_intent,
+                    paymentStatus: session.payment_status,
+                    paidAt: new Date(),
+                });
+
+                res.send({
+                    message: "Recipe purchased successfully.",
+                });
+
+            } catch (error) {
+
+                console.error(error);
+
+                res.status(500).send({
+                    message: "Internal Server Error",
                 });
 
             }
