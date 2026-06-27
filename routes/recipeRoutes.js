@@ -61,7 +61,26 @@ module.exports = function (recipesCollection, verifyToken) {
             });
         }
     });
+    // Get Popular Recipes
+    router.get("/popular", async (req, res) => {
+        try {
+            const recipes = await recipesCollection
+                .find({})
+                .sort({
+                    likesCount: -1,
+                })
+                .limit(3)
+                .toArray();
 
+            res.send(recipes);
+        } catch (error) {
+            console.error(error);
+
+            res.status(500).send({
+                message: "Failed to fetch popular recipes.",
+            });
+        }
+    });
     // Get Logged-in User Recipes
     router.get("/my-recipes", verifyToken, async (req, res) => {
         try {

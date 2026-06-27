@@ -625,5 +625,95 @@ module.exports = function (
         }
     );
 
+    // Delete Report
+    router.delete(
+        "/reports/:id",
+        verifyToken,
+        verifyAdmin,
+        async (req, res) => {
+            try {
+                const { id } = req.params;
+
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({
+                        message: "Invalid report id.",
+                    });
+                }
+
+                const report = await reportsCollection.findOne({
+                    _id: new ObjectId(id),
+                });
+
+                if (!report) {
+                    return res.status(404).send({
+                        message: "Report not found.",
+                    });
+                }
+
+                await reportsCollection.deleteOne({
+                    _id: new ObjectId(id),
+                });
+
+                res.send({
+                    message: "Report deleted successfully.",
+                });
+
+            } catch (error) {
+                console.error(error);
+
+                res.status(500).send({
+                    message: "Internal Server Error",
+                });
+            }
+        }
+    );
+
+    // Delete Reported Recipe
+    router.delete(
+        "/reports/:id/recipe",
+        verifyToken,
+        verifyAdmin,
+        async (req, res) => {
+            try {
+                const { id } = req.params;
+
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({
+                        message: "Invalid report id.",
+                    });
+                }
+
+                const report = await reportsCollection.findOne({
+                    _id: new ObjectId(id),
+                });
+
+                if (!report) {
+                    return res.status(404).send({
+                        message: "Report not found.",
+                    });
+                }
+
+                await recipesCollection.deleteOne({
+                    _id: report.recipeId,
+                });
+
+                await reportsCollection.deleteMany({
+                    recipeId: report.recipeId,
+                });
+
+                res.send({
+                    message: "Recipe and all related reports deleted successfully.",
+                });
+
+            } catch (error) {
+                console.error(error);
+
+                res.status(500).send({
+                    message: "Internal Server Error",
+                });
+            }
+        }
+    );
+
     return router;
 };
