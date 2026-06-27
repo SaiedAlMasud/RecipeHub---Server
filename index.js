@@ -9,6 +9,8 @@ const stripe = require("./config/stripe");
 const favoriteRoutes = require("./routes/favoriteRoutes");
 const profileRoutes = require("./routes/profileRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const adminRoutes = require("./routes/adminRoutes");
+const verifyAdmin = require("./middleware/verifyAdmin");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -19,7 +21,6 @@ app.use(express.json());
 async function run() {
     try {
         const {
-            db,
             usersCollection,
             recipesCollection,
             favoritesCollection,
@@ -27,6 +28,7 @@ async function run() {
             paymentsCollection,
         } = await connectDB();
 
+        const adminMiddleware = verifyAdmin(usersCollection);
         //recipe apis
         app.use(
             "/recipes",
@@ -64,6 +66,19 @@ async function run() {
                 usersCollection,
                 recipesCollection,
                 verifyToken
+            )
+        );
+
+        //admin apis
+        app.use(
+            "/admin",
+            adminRoutes(
+                usersCollection,
+                recipesCollection,
+                reportsCollection,
+                paymentsCollection,
+                verifyToken,
+                adminMiddleware
             )
         );
 
