@@ -38,6 +38,30 @@ module.exports = function (recipesCollection, verifyToken) {
         }
     });
 
+    // Get Featured Recipes
+    router.get("/featured", async (req, res) => {
+        try {
+            const recipes = await recipesCollection
+                .find({
+                    featured: true,
+                })
+                .sort({
+                    createdAt: -1,
+                })
+                .limit(6)
+                .toArray();
+
+            res.send(recipes);
+
+        } catch (error) {
+            console.error(error);
+
+            res.status(500).send({
+                message: "Internal Server Error",
+            });
+        }
+    });
+
     // Get Logged-in User Recipes
     router.get("/my-recipes", verifyToken, async (req, res) => {
         try {
@@ -64,11 +88,15 @@ module.exports = function (recipesCollection, verifyToken) {
         try {
             const { id } = req.params;
 
-            const recipe =
-                await recipesCollection.findOne({
-                    _id: new ObjectId(id),
+            if (!ObjectId.isValid(id)) {
+                return res.status(400).send({
+                    message: "Invalid recipe id.",
                 });
+            }
 
+            const recipe = await recipesCollection.findOne({
+                _id: new ObjectId(id),
+            });
             res.send(recipe);
 
         } catch (error) {
@@ -160,6 +188,7 @@ module.exports = function (recipesCollection, verifyToken) {
 
         }
     });
+
 
     return router;
 };
