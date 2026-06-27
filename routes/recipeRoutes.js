@@ -166,6 +166,82 @@ module.exports = function (recipesCollection, verifyToken) {
         }
     });
 
+    // Like Recipe
+    router.patch(
+        "/:id/like",
+        verifyToken,
+        async (req, res) => {
+            try {
+                const { id } = req.params;
+
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({
+                        message: "Invalid recipe id.",
+                    });
+                }
+
+                const recipe = await recipesCollection.findOne({
+                    _id: new ObjectId(id),
+                });
+
+                if (!recipe) {
+                    return res.status(404).send({
+                        message: "Recipe not found.",
+                    });
+                }
+
+                const likedUsers = recipe.likedUsers || [];
+
+                const alreadyLiked = likedUsers.includes(req.user.email);
+
+                if (alreadyLiked) {
+                    await recipesCollection.updateOne(
+                        { _id: recipe._id },
+                        {
+                            $pull: {
+                                likedUsers: req.user.email,
+                            },
+                            $inc: {
+                                likesCount: -1,
+                            },
+                        }
+                    );
+
+                    return res.send({
+                        liked: false,
+                        likesCount: recipe.likesCount - 1,
+                    });
+                }
+
+                await recipesCollection.updateOne(
+                    { _id: recipe._id },
+                    {
+                        $addToSet: {
+                            likedUsers: req.user.email,
+                        },
+                        $inc: {
+                            likesCount: 1,
+                        },
+                    }
+                );
+
+                res.send({
+                    liked: true,
+                    likesCount: recipe.likesCount + 1,
+                });
+
+            } catch (error) {
+
+                console.error(error);
+
+                res.status(500).send({
+                    message: "Failed to update like.",
+                });
+
+            }
+        }
+    );
+
     // Update Recipe
     router.patch("/:id", verifyToken, async (req, res) => {
         try {
