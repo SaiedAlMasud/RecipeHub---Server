@@ -24,17 +24,54 @@ module.exports = function (recipesCollection, verifyToken) {
     // Get All Recipes
     router.get("/", async (req, res) => {
         try {
+            const {
+                page = 1,
+                limit = 6,
+                category,
+            } = req.query;
+
+            const query = {};
+
+            // Category Filter (MongoDB $in)
+            if (category && category !== "All") {
+                const categories = category
+                    .split(",")
+                    .map((item) => item.trim());
+
+                query.category = {
+                    $in: categories,
+                };
+            }
+
+            const totalRecipes =
+                await recipesCollection.countDocuments(query);
+
             const recipes = await recipesCollection
-                .find()
+                .find(query)
+                .sort({
+                    createdAt: -1,
+                })
+                .skip((Number(page) - 1) * Number(limit))
+                .limit(Number(limit))
                 .toArray();
 
-            res.send(recipes);
+            res.send({
+                recipes,
+                totalRecipes,
+                totalPages: Math.ceil(
+                    totalRecipes / Number(limit)
+                ),
+                currentPage: Number(page),
+            });
+
         } catch (error) {
+
             console.error(error);
 
             res.status(500).send({
                 message: "Failed to fetch recipes.",
             });
+
         }
     });
 

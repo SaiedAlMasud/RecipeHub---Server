@@ -66,13 +66,13 @@ module.exports = function (
                     line_items: [
                         {
                             price_data: {
-                                currency: "bdt",
+                                currency: "USD",
 
                                 product_data: {
                                     name: "RecipeHub Premium Membership",
                                 },
 
-                                unit_amount: 49900,
+                                unit_amount: 500,
                             },
 
                             quantity: 1,

@@ -32,21 +32,39 @@ module.exports = function (
                 const totalReports =
                     await reportsCollection.countDocuments();
 
-                const payments =
-                    await paymentsCollection.find().toArray();
+                const payments = await paymentsCollection.find().toArray();
 
-                const totalRevenue =
-                    payments.reduce(
-                        (sum, payment) =>
-                            sum + (payment.amount || 0),
+                const premiumRevenue = payments
+                    .filter(
+                        (payment) =>
+                            payment.paymentStatus === "paid" &&
+                            payment.purchaseType !== "recipe"
+                    )
+                    .reduce(
+                        (sum, payment) => sum + Number(payment.amount || 0),
                         0
                     );
+
+                const recipeRevenue = payments
+                    .filter(
+                        (payment) =>
+                            payment.paymentStatus === "paid" &&
+                            payment.purchaseType === "recipe"
+                    )
+                    .reduce(
+                        (sum, payment) => sum + Number(payment.amount || 0),
+                        0
+                    );
+
+                const totalRevenue = premiumRevenue + recipeRevenue;
 
                 res.send({
                     totalUsers,
                     totalRecipes,
                     premiumUsers,
                     totalReports,
+                    premiumRevenue,
+                    recipeRevenue,
                     totalRevenue,
                 });
 
