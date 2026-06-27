@@ -1,4 +1,5 @@
 const express = require("express");
+const { ObjectId } = require("mongodb");
 
 module.exports = function (
     stripe,
@@ -54,6 +55,10 @@ module.exports = function (
                         mode: "payment",
 
                         customer_email: req.user.email,
+                        metadata: {
+                            recipeId,
+                            recipeName: recipe.recipeName,
+                        },
 
                         line_items: [
                             {
@@ -65,7 +70,7 @@ module.exports = function (
                                     },
 
                                     // Change this later if you store recipe price
-                                    unit_amount: 19900,
+                                    unit_amount: 100,
                                 },
 
                                 quantity: 1,
@@ -151,6 +156,63 @@ module.exports = function (
 
                 res.status(500).send({
                     message: "Internal Server Error",
+                });
+
+            }
+        }
+    );
+
+    // Get Purchased Recipes
+    router.get(
+        "/my-purchases",
+        verifyToken,
+        async (req, res) => {
+            try {
+                const purchases = await paymentsCollection
+                    .find({
+                        userEmail: req.user.email,
+                        purchaseType: "recipe",
+                    })
+                    .sort({
+                        paidAt: -1,
+                    })
+                    .toArray();
+
+                const recipeIds = purchases.map(
+                    (purchase) => new ObjectId(purchase.recipeId)
+                );
+
+                const recipes = await recipesCollection
+                    .find({
+                        _id: {
+                            $in: recipeIds,
+                        },
+                    })
+                    .toArray();
+
+                const purchasedRecipes = purchases.map((purchase) => {
+                    const recipe = recipes.find(
+                        (item) =>
+                            item._id.toString() ===
+                            purchase.recipeId.toString()
+                    );
+
+                    return {
+                        ...recipe,
+                        paidAt: purchase.paidAt,
+                        amount: purchase.amount,
+                        transactionId: purchase.transactionId,
+                    };
+                });
+
+                res.send(purchasedRecipes);
+
+            } catch (error) {
+
+                console.error(error);
+
+                res.status(500).send({
+                    message: "Failed to fetch purchased recipes.",
                 });
 
             }
