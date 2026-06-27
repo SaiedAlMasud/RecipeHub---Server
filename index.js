@@ -12,6 +12,7 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const verifyAdmin = require("./middleware/verifyAdmin");
 const reportRoutes = require("./routes/reportRoutes");
+const purchaseRoutes = require("./routes/purchaseRoutes");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -87,6 +88,16 @@ async function run() {
             "/reports",
             reportRoutes(
                 reportsCollection,
+                verifyToken
+            )
+        );
+
+        app.use(
+            "/purchase",
+            purchaseRoutes(
+                stripe,
+                paymentsCollection,
+                recipesCollection,
                 verifyToken
             )
         );

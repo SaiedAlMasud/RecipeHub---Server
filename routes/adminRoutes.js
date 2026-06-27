@@ -715,5 +715,60 @@ module.exports = function (
         }
     );
 
+    // Get All Transactions
+    router.get(
+        "/transactions",
+        verifyToken,
+        verifyAdmin,
+        async (req, res) => {
+            try {
+                const { search = "" } = req.query;
+
+                const query = {};
+
+                if (search) {
+                    query.$or = [
+                        {
+                            userEmail: {
+                                $regex: search,
+                                $options: "i",
+                            },
+                        },
+                        {
+                            transactionId: {
+                                $regex: search,
+                                $options: "i",
+                            },
+                        },
+                        {
+                            paymentStatus: {
+                                $regex: search,
+                                $options: "i",
+                            },
+                        },
+                    ];
+                }
+
+                const transactions = await paymentsCollection
+                    .find(query)
+                    .sort({
+                        paidAt: -1,
+                    })
+                    .toArray();
+
+                res.send(transactions);
+
+            } catch (error) {
+
+                console.error(error);
+
+                res.status(500).send({
+                    message: "Failed to fetch transactions.",
+                });
+
+            }
+        }
+    );
+
     return router;
 };
