@@ -1,6 +1,10 @@
-const {jwtVerify, createRemoteJWKSet } = require("jose");
+const { jwtVerify, createRemoteJWKSet } = require("jose");
 
-const JWKS = createRemoteJWKSet(new URL(process.env.BETTER_AUTH_URL + "/api/auth/jwks"));
+const baseUrl = process.env.BETTER_AUTH_URL.replace(/\/$/, "");
+
+const JWKS = createRemoteJWKSet(
+  new URL(`${baseUrl}/api/auth/jwks`)
+);
 
 const verifyToken = async (req, res, next) => {
   const header = req.headers.authorization;
